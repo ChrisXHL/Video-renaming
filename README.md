@@ -1,5 +1,5 @@
 # Video-renaming
-This is a python program that can help video producers quickly identify video content. The main capability of this program is to process a large number of videos, greatly shortening the video personnel to rename the video.
+This is a project developed entirely through ChatGPT.This is a python program that can help video producers quickly identify video content. The main capability of this program is to process a large number of videos, greatly shortening the video personnel to rename the video.
 
 
 **First download this project to your local machine, then copy the video into it, and run the program. Before running the program, you can configure the runtime environment according to the following steps, and if you encounter any problems, you can ask ChatGPT for help.**
