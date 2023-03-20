@@ -1,0 +1,51 @@
+import os
+import subprocess
+import speech_recognition as sr
+
+# Set the audio duration
+audio_duration = 20
+
+# Get all MP4 files in the current directory
+video_files = [
+    f for f in os.listdir(os.getcwd()) if (f.endswith(".MP4") or f.endswith(".mp4")) and not f.startswith("._")
+]
+
+# Define the function to process video files
+def process_video_file(video_file_path):
+    temp_audio_path = os.path.join(os.getcwd(), "temp_audio.wav")
+
+    # Use ffmpeg to extract audio from the video for the first audio_duration seconds
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", video_file_path, "-ss", "0", "-t", str(audio_duration), "-vn", "-acodec", "pcm_s16le", "-f", "wav",
+         temp_audio_path],
+        check=True,
+        text=True,
+    )
+
+    # Use Google Speech Recognition API to recognize the audio file
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(temp_audio_path) as source:
+        audio_data = recognizer.record(source)
+
+    try:
+        recognized_text = recognizer.recognize_google(audio_data, language="zh-CN")
+        print(f"Recognized text: {recognized_text}")
+
+        # Rename the video file
+        new_video_path = os.path.join(os.getcwd(), f"{recognized_text}.MP4")
+        os.rename(video_file_path, new_video_path)
+        print(f"The video has been renamed to: {new_video_path}")
+
+        # Delete the temporary audio file
+        os.remove(temp_audio_path)
+
+    except sr.UnknownValueError:
+        print(f"Unable to recognize audio: {video_file_path}")
+    except sr.RequestError as e:
+        print(f"Request error; {e}")
+
+# Process each video file in the directory
+for video_file in video_files:
+    print(f"Processing file: {video_file}")
+    video_file_path = os.path.join(os.getcwd(), video_file)
+    process_video_file(video_file_path)
