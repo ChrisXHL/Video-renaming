@@ -1,51 +1,51 @@
 import os
 import subprocess
-import speech_recognition as sr
+import openai
 
-# Set the audio duration
-audio_duration = 20
+# 设置 API 密钥
+openai.api_key = "你的密钥"
 
-# Get all MP4 files in the current directory
-video_files = [
-    f for f in os.listdir(os.getcwd()) if (f.endswith(".MP4") or f.endswith(".mp4")) and not f.startswith("._")
-]
+# 设置音频持续时间
+audio_duration = 10
 
-# Define the function to process video files
+# 获取当前目录及其子文件夹下的所有 MP4 文件
+video_files = []
+for root, dirs, files in os.walk(os.getcwd()):
+    for file in files:
+        if (file.endswith(".MP4") or file.endswith(".mp4")) and not file.startswith("._"):
+            video_files.append(os.path.join(root, file))
+
+# 定义处理视频文件的函数
 def process_video_file(video_file_path):
     temp_audio_path = os.path.join(os.getcwd(), "temp_audio.wav")
 
-    # Use ffmpeg to extract audio from the video for the first audio_duration seconds
-    subprocess.run(
-        ["ffmpeg", "-y", "-i", video_file_path, "-ss", "0", "-t", str(audio_duration), "-vn", "-acodec", "pcm_s16le", "-f", "wav",
-         temp_audio_path],
-        check=True,
-        text=True,
-    )
+    # 使用 ffmpeg 从视频中提取前 audio_duration 秒的音频
+    subprocess.run([
+        "ffmpeg", "-y", "-i", video_file_path,
+        "-ss", "0", "-t", str(audio_duration), "-vn", "-acodec", "pcm_s16le", "-f", "wav",
+        temp_audio_path
+    ], check=True, text=True)
 
-    # Use Google Speech Recognition API to recognize the audio file
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(temp_audio_path) as source:
-        audio_data = recognizer.record(source)
+    # 使用 OpenAI API 识别音频文件
+    with open(temp_audio_path, "rb") as audio_file:
+        transcript = openai.Audio.transcribe("whisper-1", audio_file)
 
-    try:
-        recognized_text = recognizer.recognize_google(audio_data, language="zh-CN")
-        print(f"Recognized text: {recognized_text}")
+    recognized_text = transcript['text']
+    print(f"识别到的文本: {recognized_text}")
 
-        # Rename the video file
-        new_video_path = os.path.join(os.getcwd(), f"{recognized_text}.MP4")
-        os.rename(video_file_path, new_video_path)
-        print(f"The video has been renamed to: {new_video_path}")
+    # 修复文件名中的非法字符
+    fixed_text = "".join([c if c.isalnum() or c.isspace() else "-" for c in recognized_text])
 
-        # Delete the temporary audio file
-        os.remove(temp_audio_path)
+    # 重命名视频文件
+    original_file_name, original_file_ext = os.path.splitext(os.path.basename(video_file_path))
+    new_video_path = os.path.join(os.path.dirname(video_file_path), f"{original_file_name}_{fixed_text}{original_file_ext}")
+    os.rename(video_file_path, new_video_path)
+    print(f"视频已重命名为：{new_video_path}")
 
-    except sr.UnknownValueError:
-        print(f"Unable to recognize audio: {video_file_path}")
-    except sr.RequestError as e:
-        print(f"Request error; {e}")
+    # 删除临时音频文件
+    os.remove(temp_audio_path)
 
-# Process each video file in the directory
+# 对目录及其子文件夹中的每个视频文件执行处理
 for video_file in video_files:
-    print(f"Processing file: {video_file}")
-    video_file_path = os.path.join(os.getcwd(), video_file)
-    process_video_file(video_file_path)
+    print(f"处理文件：{video_file}")
+    process_video_file(video_file)
